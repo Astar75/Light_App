@@ -9,4 +9,8 @@
 
     <string name="hello_first_fragment">Hello first fragment</string>
     <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
+    <string name="enable_bluetooth_message">Для работы приложения необходимо включить Bluetooth. Нажмите OK и подтвердите включение. Иначе нажмите Cancel и приложение будет закрыто.</string>
+    <string name="enable_bluetooth_title">Включить Bluetooth</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
 </resources>

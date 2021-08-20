@@ -1,20 +1,27 @@
 package com.astar.lightapp.data.ble
 
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.*
 import android.util.Log
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
-interface Scanner {
+interface DevicesScanner {
 
     fun startScan()
     fun stopScan()
 
-    class Base : Scanner {
+    fun scanState(): StateFlow<DevicesScannerState>
+
+    class Base : DevicesScanner {
 
         private val adapter: BluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-        private val scanResults: MutableMap<String, ScanResult> = mutableMapOf()
+        private val scanResults: MutableMap<String, BluetoothDevice> = mutableMapOf()
         private var scanCallback: ScanCallback? = null
         private var scanner: BluetoothLeScanner? = null
+
+        private val scannerState = MutableStateFlow<DevicesScannerState>(DevicesScannerState.Found(emptyList()))
 
         private val filters: List<ScanFilter>
         private val settings: ScanSettings
@@ -42,6 +49,8 @@ interface Scanner {
             }
         }
 
+        override fun scanState(): StateFlow<DevicesScannerState> = scannerState
+
         private fun buildSettings() = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
@@ -50,19 +59,25 @@ interface Scanner {
             return listOf<ScanFilter>(ScanFilter.Builder().build())
         }
 
+        private fun emitDevices(scanResults: MutableMap<String, BluetoothDevice>) {
+            scannerState.tryEmit(DevicesScannerState.Found(scanResults.values.toList()))
+        }
+
         private inner class ScanResultsCallback : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
-                scanResults[result.device.address] = result
+                scanResults[result.device.address] = result.device
+                emitDevices(scanResults)
             }
 
             override fun onBatchScanResults(results: MutableList<ScanResult>) {
                 results.forEach { result ->
-                    scanResults[result.device.address] = result
+                    scanResults[result.device.address] = result.device
                 }
+                emitDevices(scanResults)
             }
 
             override fun onScanFailed(errorCode: Int) {
-                Log.e("ScanFailed", "Scan error $errorCode")
+                scannerState.tryEmit(DevicesScannerState.Error(errorCode))
             }
         }
     }

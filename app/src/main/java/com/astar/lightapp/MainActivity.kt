@@ -1,19 +1,15 @@
 package com.astar.lightapp
 
+import android.bluetooth.BluetoothAdapter
+import android.content.Intent
 import android.os.Bundle
-import com.google.android.material.snackbar.Snackbar
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.navigation.findNavController
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.navigateUp
-import androidx.navigation.ui.setupActionBarWithNavController
-import android.view.Menu
-import android.view.MenuItem
 import com.astar.lightapp.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,38 +17,39 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+    }
 
-        setSupportActionBar(binding.toolbar)
+    override fun onStart() {
+        super.onStart()
+        showMessageEnableBluetooth()
+    }
 
-        val navController = findNavController(R.id.nav_host_fragment_content_main)
-        appBarConfiguration = AppBarConfiguration(navController.graph)
-        setupActionBarWithNavController(navController, appBarConfiguration)
-
-        binding.fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null).show()
+    private fun showMessageEnableBluetooth() {
+        val adapter = BluetoothAdapter.getDefaultAdapter()
+        if (!adapter.isEnabled) {
+            AlertDialog.Builder(this).apply {
+                setTitle(getString(R.string.enable_bluetooth_title))
+                setMessage(getString(R.string.enable_bluetooth_message))
+                setNegativeButton(getString(R.string.cancel)) { _, _ -> finish() }
+                setPositiveButton(getString(R.string.ok)) { dialog, _ ->
+                    enableBluetooth()
+                    dialog.dismiss()
+                }
+                setCancelable(false)
+            }.show()
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        menuInflater.inflate(R.menu.menu_main, menu)
-        return true
+    private fun enableBluetooth() {
+        val intent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+        enableBluetoothResult.launch(intent)
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        return when (item.itemId) {
-            R.id.action_settings -> true
-            else -> super.onOptionsItemSelected(item)
+    private val enableBluetoothResult = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode != RESULT_OK) {
+            showMessageEnableBluetooth()
         }
-    }
-
-    override fun onSupportNavigateUp(): Boolean {
-        val navController = findNavController(R.id.nav_host_fragment_content_main)
-        return navController.navigateUp(appBarConfiguration)
-                || super.onSupportNavigateUp()
     }
 }
